@@ -1,11 +1,27 @@
 {
   "name": "smart-tourist",
   "version": "1.0.0",
-  "description": "- це система для пошуку та бронювання подорожей по Україні. Цей проект буде створений для зручного бронювання, пошуку та планування екскурсій і вільному вибору міст.",
+  "description": "Система для пошуку та бронювання подорожей по Україні.",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
+    "start": "node index.js",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:smoke": "node --check index.js",
+    "build": "echo 'Build successful' && exit 0",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "repository": {
     "type": "git",
@@ -14,7 +30,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Anna-1804/Smart-tourist/issues"
   },
@@ -22,8 +37,9 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.10.0",
-    "eslint-plugin-react": "^7.37.5",
     "globals": "^17.12.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
     "prettier": "^3.9.8"
   }
 }

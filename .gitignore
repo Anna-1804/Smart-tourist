@@ -1,0 +1,15 @@
+# Залежності (найважча папка, яка ніколи не завантажується на GitHub)
+node_modules/
+
+# Локальні логи та кеш npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.eslintcache
+
+# Системні файли ОС
+.DS_Store
+Thumbs.db
+.vscode/

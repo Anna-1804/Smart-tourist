@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title><%= tour.title %> - Smart Tourist</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <a href="/" class="btn btn-outline-secondary btn-sm mb-3">&larr; Назад до каталогу</a>
+
+    <% if (message) { %>
+      <div class="alert <%= isError ? 'alert-danger' : 'alert-success' %>"><%= message %></div>
+    <% } %>
+
+    <div class="row">
+      <div class="col-md-7 mb-4">
+        <h2><%= tour.title %> (<%= tour.city_name %>)</h2>
+        <img src="<%= tour.image_url %>" class="img-fluid rounded mb-3" style="max-height: 300px; width: 100%; object-fit: cover;">
+        
+        <h5>Опис</h5>
+        <p><%= tour.description %></p>
+
+        <h5>Програма екскурсії</h5>
+        <p><%= tour.program %></p>
+      </div>
+
+      <div class="col-md-5">
+        <!-- Бронювання -->
+        <div class="card p-3 mb-4 border-primary shadow-sm">
+          <h4>Забронювати місця</h4>
+          <p class="fs-4 fw-bold text-success"><%= tour.price %> грн / особа</p>
+          <p>Вільних місць: <span class="badge bg-info"><%= tour.available_slots %></span></p>
+
+          <form action="/tours/<%= tour.id %>/book" method="POST">
+            <div class="mb-2">
+              <label class="form-label small">Ваше ім'я</label>
+              <input type="text" name="user_name" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Email</label>
+              <input type="email" name="user_email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small">Кількість місць</label>
+              <input type="number" name="slots_booked" value="1" min="1" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100" <%= tour.available_slots === 0 ? 'disabled' : '' %>>
+              <%= tour.available_slots === 0 ? 'Місць немає' : 'Підтвердити бронювання' %>
+            </button>
+          </form>
+        </div>
+
+        <!-- Відгуки -->
+        <h5>Відгуки</h5>
+        <div class="mb-3">
+          <% if (tour.reviews.length === 0) { %>
+            <p class="text-muted small">Відгуків поки немає.</p>
+          <% } %>
+          <% tour.reviews.forEach(r => { %>
+            <div class="border rounded p-2 mb-2 bg-white">
+              <div class="d-flex justify-content-between">
+                <strong><%= r.user_name %></strong>
+                <span class="text-warning">★ <%= r.rating %>/5</span>
+              </div>
+              <p class="mb-0 small text-secondary"><%= r.comment %></p>
+            </div>
+          <% }) %>
+        </div>
+
+        <!-- Додавання відгуку -->
+        <form action="/tours/<%= tour.id %>/reviews" method="POST" class="card p-3">
+          <h6>Залишити відгук</h6>
+          <input type="text" name="user_name" placeholder="Ім'я" class="form-control form-control-sm mb-2" required>
+          <select name="rating" class="form-select form-select-sm mb-2" required>
+            <option value="5">5/5 - Відмінно</option>
+            <option value="4">4/5 - Добре</option>
+            <option value="3">3/5 - Задовільно</option>
+          </select>
+          <textarea name="comment" placeholder="Ваш коментар" class="form-control form-control-sm mb-2" rows="2" required></textarea>
+          <button type="submit" class="btn btn-sm btn-outline-primary">Надіслати</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -20,7 +20,7 @@ const checkAdminRole = (req, res, next) => {
         '403 Forbidden: Порушення прав доступу. Потрібні права адміністратора.',
     });
   }
-  next();
+  return next();
 };
 
 // ==========================================
@@ -46,7 +46,11 @@ app.get('/tours/:id', (req, res) => {
         message: '404 Not Found: Екскурсію або місто не знайдено.',
       });
     }
-    res.render('tour-details', { tour, message: null, isError: false });
+    return res.render('tour-details', {
+      tour,
+      message: null,
+      isError: false,
+    });
   });
 });
 
@@ -60,14 +64,12 @@ app.post('/tours/:id/book', (req, res) => {
     (result) => {
       dbStore.getTourById(req.params.id, (tour) => {
         if (!tour) {
-          return res
-            .status(404)
-            .render('error', {
-              message: '404 Not Found: Екскурсію не знайдено.',
-            });
+          return res.status(404).render('error', {
+            message: '404 Not Found: Екскурсію не знайдено.',
+          });
         }
 
-        res.render('tour-details', {
+        return res.render('tour-details', {
           tour,
           message: result.success
             ? 'Місця успішно заброньовані!'
@@ -89,14 +91,12 @@ app.post('/tours/:id/reviews', (req, res) => {
     (result) => {
       dbStore.getTourById(req.params.id, (tour) => {
         if (!tour) {
-          return res
-            .status(404)
-            .render('error', {
-              message: '404 Not Found: Екскурсію не знайдено.',
-            });
+          return res.status(404).render('error', {
+            message: '404 Not Found: Екскурсію не знайдено.',
+          });
         }
 
-        res.render('tour-details', {
+        return res.render('tour-details', {
           tour,
           message: result.success
             ? 'Дякуємо! Ваш відгук оприлюднено.'

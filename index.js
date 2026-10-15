@@ -30,7 +30,7 @@ const checkAdminRole = (req, res, next) => {
 // Сценарій 1.1: Вибір міста та пошук екскурсій
 app.get('/', (req, res) => {
   const selectedCity = req.query.city_id;
-  
+
   dbStore.getCities((cities) => {
     dbStore.getToursByCity(selectedCity, (tours) => {
       res.render('index', { cities, tours, selectedCity });
@@ -52,48 +52,60 @@ app.get('/tours/:id', (req, res) => {
 
 // Сценарій 1.3: Бронювання місць на екскурсію
 app.post('/tours/:id/book', (req, res) => {
-  dbStore.createBooking({
-    tour_id: req.params.id,
-    ...req.body,
-  }, (result) => {
-    dbStore.getTourById(req.params.id, (tour) => {
-      if (!tour) {
-        return res
-          .status(404)
-          .render('error', { message: '404 Not Found: Екскурсію не знайдено.' });
-      }
+  dbStore.createBooking(
+    {
+      tour_id: req.params.id,
+      ...req.body,
+    },
+    (result) => {
+      dbStore.getTourById(req.params.id, (tour) => {
+        if (!tour) {
+          return res
+            .status(404)
+            .render('error', {
+              message: '404 Not Found: Екскурсію не знайдено.',
+            });
+        }
 
-      res.render('tour-details', {
-        tour,
-        message: result.success ? 'Місця успішно заброньовані!' : result.message,
-        isError: !result.success,
+        res.render('tour-details', {
+          tour,
+          message: result.success
+            ? 'Місця успішно заброньовані!'
+            : result.message,
+          isError: !result.success,
+        });
       });
-    });
-  });
+    }
+  );
 });
 
 // Сценарій 1.4: Залишення відгуку про поїздку
 app.post('/tours/:id/reviews', (req, res) => {
-  dbStore.addReview({
-    tour_id: req.params.id,
-    ...req.body,
-  }, (result) => {
-    dbStore.getTourById(req.params.id, (tour) => {
-      if (!tour) {
-        return res
-          .status(404)
-          .render('error', { message: '404 Not Found: Екскурсію не знайдено.' });
-      }
+  dbStore.addReview(
+    {
+      tour_id: req.params.id,
+      ...req.body,
+    },
+    (result) => {
+      dbStore.getTourById(req.params.id, (tour) => {
+        if (!tour) {
+          return res
+            .status(404)
+            .render('error', {
+              message: '404 Not Found: Екскурсію не знайдено.',
+            });
+        }
 
-      res.render('tour-details', {
-        tour,
-        message: result.success
-          ? 'Дякуємо! Ваш відгук оприлюднено.'
-          : result.message,
-        isError: !result.success,
+        res.render('tour-details', {
+          tour,
+          message: result.success
+            ? 'Дякуємо! Ваш відгук оприлюднено.'
+            : result.message,
+          isError: !result.success,
+        });
       });
-    });
-  });
+    }
+  );
 });
 
 // ==========================================
@@ -132,7 +144,9 @@ app.post('/admin/tours', checkAdminRole, (req, res) => {
               tours,
               bookings,
               reviews,
-              message: result.success ? 'Нову екскурсію успішно додано!' : result.message,
+              message: result.success
+                ? 'Нову екскурсію успішно додано!'
+                : result.message,
               isError: !result.success,
             });
           });
@@ -154,7 +168,9 @@ app.post('/admin/tours/:id/update', checkAdminRole, (req, res) => {
               tours,
               bookings,
               reviews,
-              message: result.success ? 'Параметри екскурсії оновлено!' : result.message,
+              message: result.success
+                ? 'Параметри екскурсії оновлено!'
+                : result.message,
               isError: !result.success,
             });
           });
@@ -172,5 +188,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Проєкт Smart-tourist на SQLite запущено: http://localhost:${PORT}`);
+  console.log(
+    `Проєкт Smart-tourist на SQLite запущено: http://localhost:${PORT}`
+  );
 });

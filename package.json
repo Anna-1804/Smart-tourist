@@ -13,7 +13,8 @@
     "test:smoke": "node --check index.js",
     "build": "echo 'Build successful' && exit 0",
     "prepare": "husky",
-    "test": "jest --runInBand --detectOpenHandles"
+    "test": "jest --runInBand --detectOpenHandles",
+    "test:mutate": "stryker run"
   },
   "lint-staged": {
     "*.js": [
@@ -37,6 +38,8 @@
   "homepage": "https://github.com/Anna-1804/Smart-tourist#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/jest-runner": "^10.0.0",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
     "husky": "^9.1.7",

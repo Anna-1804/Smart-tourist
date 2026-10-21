@@ -187,8 +187,13 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(
-    `Проєкт Smart-tourist на SQLite запущено: http://localhost:${PORT}`
-  );
-});
+// Запускаємо сервер лише якщо файл запущено напряму (щоб Jest не дублював listen)
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(
+      `Проєкт Smart-tourist на SQLite запущено: http://localhost:${PORT}`
+    );
+  });
+}
+
+module.exports = app;

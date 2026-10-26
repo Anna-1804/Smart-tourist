@@ -13,7 +13,7 @@
 
 ## 2.Cхема БД
 
-![Cхема БД](./images/schema_DB.png)
+![Cхема БД](./images/Node.js_lab2.drawio.png)
 
 - cities(id, name, description)
 - tours(id, city_id, title, description, program, price, available_slots ≥ 0, image_url)

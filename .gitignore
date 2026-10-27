@@ -16,4 +16,8 @@ Thumbs.db
 # База даних SQLite
 database.sqlite
 database.sqlite-*
+
+# Тимчасові файли та звіти Stryker
 reports/
+.stryker-tmp/
+coverage/

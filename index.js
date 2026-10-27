@@ -114,15 +114,27 @@ app.post('/tours/:id/reviews', (req, res) => {
 
 // Сценарії 2.3 та 2.4: Перегляд адмін-панелі, аналіз відгуків та бронювань
 app.get('/admin', checkAdminRole, (req, res) => {
-  dbStore.getCities((cities) => {
+  // Необов'язковий фільтр: /admin?role=admin&tour_id=2
+  const rawTourId = req.query.tour_id;
+  const hasFilter = rawTourId !== undefined && rawTourId !== '';
+  const tourId = hasFilter ? Number(rawTourId) : null;
+
+  if (hasFilter && (!Number.isInteger(tourId) || tourId <= 0)) {
+    return res.status(400).render('error', {
+      message: '400 Bad Request: tour_id має бути додатним цілим числом.',
+    });
+  }
+
+  return dbStore.getCities((cities) => {
     dbStore.getToursByCity(null, (tours) => {
-      dbStore.getBookings(null, (bookings) => {
-        dbStore.getReviews(null, (reviews) => {
+      dbStore.getBookings(tourId, (bookings) => {
+        dbStore.getReviews(tourId, (reviews) => {
           res.render('admin', {
             cities,
             tours,
             bookings,
             reviews,
+            selectedTourId: tourId,
             message: null,
             isError: false,
           });

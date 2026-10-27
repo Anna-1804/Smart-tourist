@@ -38,4 +38,15 @@ describe('Integration Tests: HTTP-сервер та SQLite база даних',
     const response = await request(app).get('/tours/9999');
     expect(response.status).toBe(404);
   });
+
+  // Фільтр адмінки за туром (Сценарії 2.3, 2.4)
+  it('GET /admin?tour_id=1 з правами адміна повертає 200', async () => {
+    const response = await request(app).get('/admin?role=admin&tour_id=1');
+    expect(response.status).toBe(200);
+  });
+
+  it('GET /admin?tour_id=abc повертає 400', async () => {
+    const response = await request(app).get('/admin?role=admin&tour_id=abc');
+    expect(response.status).toBe(400);
+  });
 });

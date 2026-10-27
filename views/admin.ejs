@@ -103,6 +103,22 @@
           <% }) %>
         </div>
 
+        <!-- Фільтр бронювань і відгуків за туром (Сценарії 2.3, 2.4) -->
+        <% const selId = (typeof selectedTourId !== 'undefined') ? selectedTourId : null; %>
+        <form action="/admin" method="GET" class="card p-3 shadow-sm mb-4">
+          <input type="hidden" name="role" value="admin">
+          <label class="form-label small">Показати бронювання й відгуки для туру</label>
+          <div class="input-group input-group-sm">
+            <select name="tour_id" class="form-select">
+              <option value="">Усі тури</option>
+              <% tours.forEach(t => { %>
+                <option value="<%= t.id %>" <%= selId === t.id ? 'selected' : '' %>><%= t.title %></option>
+              <% }) %>
+            </select>
+            <button type="submit" class="btn btn-outline-primary">Фільтрувати</button>
+          </div>
+        </form>
+
         <!-- Перевірка бронювань (Сценарій 2.4) -->
         <div class="card p-3 shadow-sm mb-4">
           <h4>Останні бронювання</h4>

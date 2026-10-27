@@ -16,3 +16,4 @@ Thumbs.db
 # База даних SQLite
 database.sqlite
 database.sqlite-*
+reports/

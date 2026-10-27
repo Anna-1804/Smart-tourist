@@ -1,24 +1,4 @@
-// models/dbStore.js
 const db = require('../db');
-
-// Утиліта для виконання запитів із ретраями (обробка збоїв SQLITE_BUSY)
-function runWithRetry(query, params = [], retries = 3) {
-  return new Promise((resolve, reject) => {
-    db.run(query, params, function (err) {
-      if (err && err.code === 'SQLITE_BUSY' && retries > 0) {
-        setTimeout(() => {
-          runWithRetry(query, params, retries - 1)
-            .then(resolve)
-            .reject(reject);
-        }, 300);
-      } else if (err) {
-        reject(err);
-      } else {
-        resolve(this);
-      }
-    });
-  });
-}
 
 module.exports = {
   // Отримання списку міст
@@ -67,7 +47,12 @@ module.exports = {
     { tour_id, user_name, user_email, slots_booked },
     callback
   ) => {
-    if (!user_name || !user_email || !slots_booked) {
+    if (
+      !user_name ||
+      !user_email ||
+      slots_booked === undefined ||
+      slots_booked === ''
+    ) {
       return callback({
         success: false,
         status: 400,

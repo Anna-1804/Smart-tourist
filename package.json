@@ -12,12 +12,13 @@
     "format:check": "prettier --check .",
     "test:smoke": "node --check index.js",
     "build": "echo 'Build successful' && exit 0",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "jest"
   },
   "lint-staged": {
     "*.js": [
       "prettier --write",
-      "eslint --fix"
+      "node ./node_modules/eslint/bin/eslint.js --fix"
     ],
     "*.{json,md}": [
       "prettier --write"

@@ -1,5 +1,10 @@
 const request = require('supertest');
 const app = require('../../index');
+const { initDatabase, closeDatabase } = require('../../database');
+
+// Ізольована БД на прогін; ініціалізація тепер явна
+beforeAll(() => initDatabase(':memory:'));
+afterAll(() => closeDatabase());
 
 describe('Integration Tests: HTTP-сервер та SQLite база даних', () => {
   // Інтеграційний тест 1: Перевірка головної сторінки

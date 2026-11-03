@@ -10,7 +10,7 @@ exports.addReview = async (tourId, body = {}) => {
     throw new ValidationError("Заповніть ім'я, оцінку та текст коментаря.");
   }
   const numRating = Number(rating);
-  if (Number.isNaN(numRating) || numRating < 1 || numRating > 5) {
+  if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
     throw new ValidationError('Оцінка відгуку має бути від 1 до 5.');
   }
 
@@ -22,7 +22,6 @@ exports.addReview = async (tourId, body = {}) => {
     userName: user_name,
     rating: numRating,
     comment,
-    createdAt: new Date().toLocaleDateString('uk-UA'),
   });
   logger.info(`відгук ${result.lastID} до туру ${tour.id}`);
   return { id: result.lastID };

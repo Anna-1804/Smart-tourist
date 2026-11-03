@@ -33,6 +33,7 @@
           <p>Вільних місць: <span class="badge bg-info"><%= tour.available_slots %></span></p>
 
           <form action="/tours/<%= tour.id %>/book" method="POST">
+            <input type="hidden" name="idempotency_key" value="<%= idempotencyKey %>">
             <div class="mb-2">
               <label class="form-label small">Ваше ім'я</label>
               <input type="text" name="user_name" class="form-control" required>

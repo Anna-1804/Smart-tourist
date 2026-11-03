@@ -8,7 +8,7 @@ const {
 const logger = require('../lib/logger');
 
 exports.createBooking = async (tourId, body = {}) => {
-  const { user_name, user_email, slots_booked } = body;
+  const { user_name, user_email, slots_booked, idempotency_key } = body;
 
   if (
     !user_name ||
@@ -29,28 +29,40 @@ exports.createBooking = async (tourId, body = {}) => {
       'Кількість місць для бронювання має бути більшою за 0.'
     );
   }
+  if (!Number.isInteger(slots)) {
+    throw new ValidationError('Кількість місць має бути цілим числом.');
+  }
 
   const tour = await tourRepo.findTour(Number(tourId));
   if (!tour) throw new NotFoundError('Екскурсію не знайдено.');
-  if (tour.available_slots < slots) {
-    throw new ConflictError(
-      `На жаль, доступно лише ${tour.available_slots} вільних місць.`
-    );
-  }
 
-  const { booked } = await bookingRepo.create({
+  // Перевірка місць і списання — всередині транзакції репозиторію (без гонки).
+  // Ключ ідемпотентності: повторне надсилання форми не створює друге бронювання.
+  const key = typeof idempotency_key === 'string' ? idempotency_key.trim() : '';
+  const result = await bookingRepo.create({
     tourId: tour.id,
     userName: user_name,
     userEmail: user_email,
     slots,
-    createdAt: new Date().toLocaleDateString('uk-UA'),
+    idempotencyKey: /^[\w-]{8,64}$/.test(key) ? key : null,
   });
-  if (!booked) {
+
+  if (!result.booked) {
+    // актуальна кількість місць — вже після спроби, а не з попереднього читання
+    const fresh = await tourRepo.findTour(tour.id);
     throw new ConflictError(
-      'Вільні місця щойно закінчились. Спробуйте ще раз.'
+      `На жаль, доступно лише ${fresh ? fresh.available_slots : 0} вільних місць.`
     );
   }
 
-  logger.info(`бронювання: тур ${tour.id}, місць ${slots}`);
-  return { tour_id: tour.id, tour_title: tour.title, slots_booked: slots };
+  logger.info(
+    `бронювання ${result.id}: тур ${tour.id}, місць ${slots}${result.duplicate ? ' (повтор, нічого не змінено)' : ''}`
+  );
+  return {
+    id: result.id,
+    duplicate: result.duplicate,
+    tour_id: tour.id,
+    tour_title: tour.title,
+    slots_booked: slots,
+  };
 };

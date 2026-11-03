@@ -1,6 +1,9 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('node:crypto');
 
+const { initDatabase } = require('./database');
+const logger = require('./lib/logger');
 const requestContext = require('./middleware/requestContext');
 const requireAdmin = require('./middleware/requireAdmin');
 const errorHandler = require('./middleware/errorHandler');
@@ -35,7 +38,13 @@ const renderTour = async (
   { message = null, isError = false, status = 200 } = {}
 ) => {
   const tour = await tourService.getTourDetails(tourId);
-  res.status(status).render('tour-details', { tour, message, isError });
+  // idempotencyKey потрапляє в приховане поле форми бронювання
+  res.status(status).render('tour-details', {
+    tour,
+    message,
+    isError,
+    idempotencyKey: crypto.randomUUID(),
+  });
 };
 
 const renderAdmin = async (
@@ -68,9 +77,11 @@ app.get('/tours/:id', async (req, res) => {
 // Сценарій 1.3: Бронювання місць на екскурсію
 app.post('/tours/:id/book', async (req, res) => {
   try {
-    await bookingService.createBooking(req.params.id, req.body);
+    const booking = await bookingService.createBooking(req.params.id, req.body);
     await renderTour(res, req.params.id, {
-      message: 'Місця успішно заброньовані!',
+      message: booking.duplicate
+        ? 'Це бронювання вже було оформлено раніше.'
+        : 'Місця успішно заброньовані!',
     });
   } catch (err) {
     if (!isFormError(err)) throw err;
@@ -146,13 +157,24 @@ app.use((req, res, next) => {
 // Єдиний обробник помилок (має бути останнім)
 app.use(errorHandler);
 
-// Запускаємо сервер лише якщо файл запущено напряму (щоб Jest не дублював listen)
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(
+// Явний старт: спершу БД (SELECT 1, схема, міграції), потім сервер.
+// Якщо БД недоступна, процес падає одразу.
+const start = async () => {
+  await initDatabase();
+  return app.listen(PORT, () => {
+    logger.info(
       `Проєкт Smart-tourist на SQLite запущено: http://localhost:${PORT}`
     );
+  });
+};
+
+// Запускаємо лише якщо файл запущено напряму (щоб Jest не дублював listen)
+if (process.env.NODE_ENV !== 'test') {
+  start().catch((err) => {
+    logger.error(`Не вдалося запустити застосунок: ${err.message}`);
+    process.exit(1);
   });
 }
 
 module.exports = app;
+module.exports.start = start;

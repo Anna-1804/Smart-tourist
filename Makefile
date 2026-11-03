@@ -7,8 +7,7 @@ format:
 	npm run format
 
 test:
-	@echo "Running Smart-tourist smoke tests..."
-	@echo "All smoke tests passed."
+	npm test
 
 version:
 	@echo "version: v0.1.0"

@@ -33,7 +33,9 @@ exports.createTour = async (body = {}) => {
     !city_id ||
     !title ||
     price === undefined ||
-    available_slots === undefined
+    price === '' ||
+    available_slots === undefined ||
+    available_slots === ''
   ) {
     throw new ValidationError("Заповніть усі обов'язкові поля туру.");
   }

@@ -10,10 +10,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:smoke": "node --check index.js",
+    "test:smoke": "node --check index.js && node --check database/index.js",
     "build": "echo 'Build successful' && exit 0",
     "prepare": "husky",
-    "test": "jest"
+    "test": "node --test \"tests/data-layer/*.test.js\"",
+    "test:jest": "jest tests/integration"
   },
   "lint-staged": {
     "*.js": [

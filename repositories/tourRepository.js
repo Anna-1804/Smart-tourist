@@ -1,11 +1,11 @@
 const { all, get, run } = require('./base');
 
-exports.listCities = () => all('SELECT * FROM cities');
+exports.listCities = () => all('SELECT * FROM cities ORDER BY id');
 
 exports.listTours = (cityId) =>
   cityId
-    ? all('SELECT * FROM tours WHERE city_id = ?', [cityId])
-    : all('SELECT * FROM tours');
+    ? all('SELECT * FROM tours WHERE city_id = ? ORDER BY id', [cityId])
+    : all('SELECT * FROM tours ORDER BY id');
 
 exports.findTour = (id) => get('SELECT * FROM tours WHERE id = ?', [id]);
 

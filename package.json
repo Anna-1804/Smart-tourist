@@ -14,7 +14,7 @@
     "build": "echo 'Build successful' && exit 0",
     "prepare": "husky",
     "test": "node --test \"tests/data-layer/*.test.js\"",
-    "test:jest": "jest tests/integration"
+    "check:http": "node scripts/check-http.js"
   },
   "lint-staged": {
     "*.js": [

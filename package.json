@@ -13,7 +13,11 @@
     "test:smoke": "node --check index.js && node --check database/index.js",
     "build": "echo 'Build successful' && exit 0",
     "prepare": "husky",
-    "test": "node --test \"tests/data-layer/*.test.js\"",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
+    "test:integration": "node --test \"tests/integration/*.test.js\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"services/**\" --test-coverage-include=\"middleware/**\" --test-coverage-include=\"lib/**\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"tests/**/*.test.js\"",
+    "test:coverage:all": "node --test --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-coverage-exclude=\"scripts/**\" --test-coverage-exclude=\"eslint.config.mjs\" --test-coverage-lines=90 --test-coverage-branches=85 --test-coverage-functions=85 \"tests/**/*.test.js\"",
     "check:http": "node scripts/check-http.js"
   },
   "lint-staged": {

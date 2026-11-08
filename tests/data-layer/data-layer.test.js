@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { FakeDatabase } = require('../helpers/fakeSqlite3');
+const { TestDb } = require('../helpers/testDb');
 const { createDb, inRequest } = require('../helpers/env');
 const { prepareConnection, initSchema } = require('../../database');
 const base = require('../../repositories/base');
@@ -58,13 +58,13 @@ test('старт: схема створюється, початкові дані
 });
 
 test('старт: недоступна БД → помилка одразу (SELECT 1)', async () => {
-  const db = new FakeDatabase();
+  const db = await TestDb.open();
   db.inject((sql) => sql === 'SELECT 1 AS ok', new Error('SQLITE_CANTOPEN'));
   await assert.rejects(prepareConnection(db), /SQLITE_CANTOPEN/);
 });
 
 test('міграція: старий файл БД отримує ключ ідемпотентності й ISO-дати', async () => {
-  const db = new FakeDatabase();
+  const db = await TestDb.open();
   await db.execute(
     `CREATE TABLE cities (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT);
      CREATE TABLE tours (id INTEGER PRIMARY KEY AUTOINCREMENT, city_id INTEGER, title TEXT NOT NULL,

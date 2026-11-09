@@ -12,4 +12,13 @@ export default [
     },
   },
   pluginJs.configs.recommended,
+  {
+    ignores: [
+      '.stryker-tmp/**',
+      'reports/**',
+      'playwright-report/**',
+      'test-results/**',
+      'tmp/**',
+    ],
+  },
 ];

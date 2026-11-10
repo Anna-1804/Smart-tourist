@@ -242,3 +242,47 @@ describe('tourService.updateTour', () => {
     assert.equal(update.mock.callCount(), 0);
   });
 });
+
+describe('tourService: валідація, яку раніше пропускали зелені тести', () => {
+  let insert;
+  let update;
+  beforeEach(() => {
+    mock.method(tourRepo, 'findTour', async (id) =>
+      id === 7 ? { ...EXISTING } : undefined
+    );
+    insert = mock.method(tourRepo, 'insertTour', async () => ({ lastID: 1 }));
+    update = mock.method(tourRepo, 'updateTour', async () => ({ changes: 1 }));
+  });
+
+  const badUpdates = [
+    ['порожня ціна', { price: '' }, /Ціна/],
+    ['ціна не число', { price: 'abc' }, /Ціна/],
+    ['порожня кількість місць', { available_slots: '' }, /місць/],
+    ['кількість місць не число', { available_slots: 'abc' }, /місць/],
+    ['дробова кількість місць', { available_slots: '2.5' }, /цілим/],
+    ['порожня назва', { title: '' }, /Назва/],
+    ['назва з самих пробілів', { title: '   ' }, /Назва/],
+  ];
+  for (const [title, body, text] of badUpdates) {
+    test(`updateTour: ${title} → 400, дані не змінюються`, async () => {
+      await rejectsWith(tourService.updateTour('7', body), 400, text);
+      assert.equal(update.mock.callCount(), 0);
+    });
+  }
+
+  const badCreates = [
+    ['ціна не число', { price: 'abc' }, /Ціна/],
+    ['дробова кількість місць', { available_slots: '2.5' }, /цілим/],
+    ['назва з самих пробілів', { title: '   ' }, /обов'язкові/],
+  ];
+  for (const [title, fields, text] of badCreates) {
+    test(`createTour: ${title} → 400, тур не створюється`, async () => {
+      await rejectsWith(
+        tourService.createTour({ ...VALID, ...fields }),
+        400,
+        text
+      );
+      assert.equal(insert.mock.callCount(), 0);
+    });
+  }
+});

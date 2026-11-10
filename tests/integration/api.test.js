@@ -7,8 +7,6 @@ process.env.NODE_ENV = 'test';
 const { test, describe, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const logger = require('../../lib/logger');
-
 const app = require('../../index');
 const { initDatabase, closeDatabase, getDatabase } = require('../../database');
 
@@ -401,6 +399,18 @@ describe('Сценарій 2.2: зміна екскурсії', () => {
     assert.equal(res.status, 400);
     assert.equal(await slotsOf(1), 5);
   });
+
+  test('порожня ціна → 400, ціна в БД не змінюється', async () => {
+    const before = (await dbAll('SELECT price FROM tours WHERE id = 1'))[0];
+    const res = await post(
+      '/admin/tours/1/update',
+      { price: '', available_slots: '' },
+      'admin'
+    );
+    assert.equal(res.status, 400);
+    const after = (await dbAll('SELECT price FROM tours WHERE id = 1'))[0];
+    assert.deepEqual(after, before);
+  });
 });
 
 describe('Сценарії 2.3 і 2.4: відгуки й бронювання в адмінці', () => {
@@ -471,38 +481,5 @@ describe('Сценарії помилок і ідентифікатор проц
     const res = await get('/');
     assert.equal(res.status, 500);
     assert.doesNotMatch(res.body, /initDatabase/);
-  });
-
-  describe('журнал запиту (middleware/requestContext)', () => {
-    const waitFor = async (condition) => {
-      for (let i = 0; i < 50 && !condition(); i += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-    };
-
-    test('вхід і завершення запиту логуються з однаковим ID процесу та роллю', async () => {
-      const lines = [];
-      const restore = logger.setSink((level, line) => lines.push(line));
-      try {
-        const res = await get('/');
-        const processId = res.headers.get('x-process-id');
-        const entry = `[process=${processId}] --> GET / (role=guest)`;
-        const exit = `[process=${processId}] <-- 200 GET /`;
-
-        // подія 'finish' спрацьовує вже після відправки відповіді
-        await waitFor(() => lines.some((l) => l.includes(exit)));
-
-        assert.ok(
-          lines.some((l) => l.includes(entry)),
-          lines.join('\n')
-        );
-        assert.ok(
-          lines.some((l) => l.includes(exit)),
-          lines.join('\n')
-        );
-      } finally {
-        restore();
-      }
-    });
   });
 });

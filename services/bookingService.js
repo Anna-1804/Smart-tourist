@@ -7,20 +7,25 @@ const {
 } = require('../lib/errors');
 const logger = require('../lib/logger');
 
+// Мінімально осмислена адреса: текст@домен.зона, без пробілів
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 exports.createBooking = async (tourId, body = {}) => {
   const { user_name, user_email, slots_booked, idempotency_key } = body;
 
   if (
-    !user_name ||
-    !user_email ||
+    typeof user_name !== 'string' ||
+    user_name.trim() === '' ||
+    typeof user_email !== 'string' ||
+    user_email.trim() === '' ||
     slots_booked === undefined ||
     slots_booked === ''
   ) {
     throw new ValidationError("Будь ласка, заповніть усі обов'язкові поля.");
   }
-  if (!user_email.includes('@')) {
+  if (!EMAIL_PATTERN.test(user_email.trim())) {
     throw new ValidationError(
-      'Вказано некоректний email (відсутній символ @).'
+      'Вказано некоректний email (очікується формат name@example.com).'
     );
   }
   const slots = Number(slots_booked);
@@ -41,8 +46,8 @@ exports.createBooking = async (tourId, body = {}) => {
   const key = typeof idempotency_key === 'string' ? idempotency_key.trim() : '';
   const result = await bookingRepo.create({
     tourId: tour.id,
-    userName: user_name,
-    userEmail: user_email,
+    userName: user_name.trim(),
+    userEmail: user_email.trim(),
     slots,
     idempotencyKey: /^[\w-]{8,64}$/.test(key) ? key : null,
   });

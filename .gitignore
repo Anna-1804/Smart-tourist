@@ -22,3 +22,7 @@ reports/
 .stryker-tmp/
 coverage/
 *.bak
+
+playwright-report/
+test-results/
+tmp/

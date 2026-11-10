@@ -51,6 +51,16 @@ describe('services/access.requireAdmin', () => {
     assert.throws(requireAdmin, (err) => err.status === 403);
   });
 
+  test('відмова містить зрозуміле повідомлення про права', () => {
+    as({ user: { role: 'guest' } }, () =>
+      assert.throws(requireAdmin, (err) => {
+        assert.equal(err.status, 403);
+        assert.match(err.message, /Потрібні права адміністратора/);
+        return true;
+      })
+    );
+  });
+
   test('відмова записується в лог із ID процесу', () => {
     const lines = [];
     const restore = logger.setSink((level, line) => lines.push([level, line]));

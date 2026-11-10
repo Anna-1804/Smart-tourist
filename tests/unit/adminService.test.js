@@ -47,6 +47,7 @@ describe('adminService.getDashboard', () => {
       const { bookings } = stub();
       await assert.rejects(adminService.getDashboard(raw), (err) => {
         assert.equal(err.status, 400);
+        assert.match(err.message, /додатним цілим числом/);
         return true;
       });
       assert.equal(bookings.mock.callCount(), 0);

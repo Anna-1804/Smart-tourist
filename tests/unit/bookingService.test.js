@@ -197,4 +197,45 @@ describe('bookingService.createBooking: слабка валідація, яку 
       assert.equal(create.mock.callCount(), 0);
     });
   }
+  describe('bookingService.createBooking: контактні дані (додаткові перевірки)', () => {
+    const bad = [
+      ['email відсутній', { user_email: undefined }, /обов'язкові/],
+      ['email не рядок', { user_email: 42 }, /обов'язкові/],
+      ['email з самих пробілів', { user_email: '   ' }, /обов'язкові/],
+      [
+        'email із зайвими символами після домену',
+        { user_email: 'a@b.c d' },
+        /email/,
+      ],
+      ['email з другим @', { user_email: 'a@b.c@d' }, /email/],
+    ];
+    for (const [title, fields, text] of bad) {
+      test(`${title} → 400, бронювання не створюється`, async () => {
+        const create = mock.method(bookingRepo, 'create', async () => ({}));
+        await rejectsWith(
+          bookingService.createBooking('1', { ...VALID, ...fields }),
+          400,
+          text
+        );
+        assert.equal(create.mock.callCount(), 0);
+      });
+    }
+
+    test('пробіли навколо імені та email обрізаються перед збереженням', async () => {
+      stubTour();
+      const create = mock.method(bookingRepo, 'create', async () => ({
+        booked: true,
+        duplicate: false,
+        id: 1,
+      }));
+      await bookingService.createBooking('1', {
+        ...VALID,
+        user_name: '  Олена  ',
+        user_email: '  elena@gmail.com  ',
+      });
+      const saved = create.mock.calls[0].arguments[0];
+      assert.equal(saved.userName, 'Олена');
+      assert.equal(saved.userEmail, 'elena@gmail.com');
+    });
+  });
 });

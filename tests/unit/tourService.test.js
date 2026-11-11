@@ -262,6 +262,8 @@ describe('tourService: валідація, яку раніше пропуска�
     ['дробова кількість місць', { available_slots: '2.5' }, /цілим/],
     ['порожня назва', { title: '' }, /Назва/],
     ['назва з самих пробілів', { title: '   ' }, /Назва/],
+    ['назва не рядок (число)', { title: 123 }, /Назва/],
+    ['назва null', { title: null }, /Назва/],
   ];
   for (const [title, body, text] of badUpdates) {
     test(`updateTour: ${title} → 400, дані не змінюються`, async () => {
@@ -274,6 +276,8 @@ describe('tourService: валідація, яку раніше пропуска�
     ['ціна не число', { price: 'abc' }, /Ціна/],
     ['дробова кількість місць', { available_slots: '2.5' }, /цілим/],
     ['назва з самих пробілів', { title: '   ' }, /обов'язкові/],
+    ['назва відсутня', { title: undefined }, /обов'язкові/],
+    ['назва не рядок (число)', { title: 123 }, /обов'язкові/],
   ];
   for (const [title, fields, text] of badCreates) {
     test(`createTour: ${title} → 400, тур не створюється`, async () => {

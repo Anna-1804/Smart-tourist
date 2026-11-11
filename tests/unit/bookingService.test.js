@@ -174,3 +174,27 @@ describe('bookingService.createBooking: бронювання', () => {
     );
   });
 });
+
+describe('bookingService.createBooking: слабка валідація, яку раніше пропускали тести', () => {
+  test('імʼя з самих пробілів → 400, бронювання не створюється', async () => {
+    const create = mock.method(bookingRepo, 'create', async () => ({}));
+    await rejectsWith(
+      bookingService.createBooking('1', { ...VALID, user_name: '   ' }),
+      400,
+      /обов'язкові/
+    );
+    assert.equal(create.mock.callCount(), 0);
+  });
+
+  for (const email of ['@', 'a@', '@b', 'a@b', 'a b@c.d']) {
+    test(`некоректний email ${JSON.stringify(email)} → 400`, async () => {
+      const create = mock.method(bookingRepo, 'create', async () => ({}));
+      await rejectsWith(
+        bookingService.createBooking('1', { ...VALID, user_email: email }),
+        400,
+        /email/
+      );
+      assert.equal(create.mock.callCount(), 0);
+    });
+  }
+});

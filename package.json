@@ -6,13 +6,19 @@
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
+    "migrate": "node scripts/migrate.js all",
+    "migrate:schema": "node scripts/migrate.js schema",
+    "migrate:data": "node scripts/migrate.js data",
+    "migrate:indexes": "node scripts/migrate.js indexes",
+    "seed": "node scripts/migrate.js seed",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:commits": "node scripts/check-commits.js",
     "test:smoke": "node --check index.js && node --check database/index.js",
     "build": "echo 'Build successful' && exit 0",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "test": "node --test \"tests/**/*.test.js\"",
     "test:unit": "node --test \"tests/unit/*.test.js\"",
     "test:integration": "node --test \"tests/integration/*.test.js\"",
@@ -38,6 +44,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=22.8"
+  },
   "bugs": {
     "url": "https://github.com/Anna-1804/Smart-tourist/issues"
   },

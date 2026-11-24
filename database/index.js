@@ -45,9 +45,19 @@ CREATE TABLE IF NOT EXISTS reviews (
   created_at TEXT,
   FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  name TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL
+);
+`;
+
+// Індекси винесено в окремий крок: на великій БД їх створення триває довго
+const INDEXES = `
 CREATE INDEX IF NOT EXISTS ix_tours_city ON tours(city_id);
 CREATE INDEX IF NOT EXISTS ix_bookings_tour ON bookings(tour_id);
 CREATE INDEX IF NOT EXISTS ix_reviews_tour ON reviews(tour_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_bookings_idempotency
+  ON bookings(idempotency_key);
 `;
 
 // --- Promise-обгортки, не залежні від контексту запиту (потрібні лише при старті) ---
@@ -57,7 +67,9 @@ const exec = (db, sql) =>
   );
 const run = (db, sql, params = []) =>
   new Promise((resolve, reject) =>
-    db.run(sql, params, (err) => (err ? reject(err) : resolve()))
+    db.run(sql, params, function onDone(err) {
+      return err ? reject(err) : resolve({ changes: this.changes });
+    })
   );
 const get = (db, sql, params = []) =>
   new Promise((resolve, reject) =>
@@ -79,37 +91,54 @@ function openDatabase(filePath = defaultPath()) {
 }
 
 // Налаштування з'єднання + перевірка, що БД справді відповідає (падаємо одразу)
-async function prepareConnection(db) {
+async function prepareConnection(db, { busyTimeoutMs = 5000 } = {}) {
   db.serialize(); // запити виконуються в порядку надсилання
-  await exec(db, 'PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+  await exec(
+    db,
+    `PRAGMA foreign_keys = ON; PRAGMA busy_timeout = ${Number(busyTimeoutMs)};`
+  );
   const probe = await get(db, 'SELECT 1 AS ok');
   if (!probe || probe.ok !== 1) throw new Error('БД не відповіла на SELECT 1');
 }
 
 const OLD_DATE_FORMAT = "'[0-3][0-9].[0-1][0-9].[0-9][0-9][0-9][0-9]'";
 
-async function migrate(db) {
-  // 1) ключ ідемпотентності для старих файлів БД без цього стовпця
+// ---------- Кроки міграцій ----------
+// Кожен крок окремий і безпечний для повторного запуску.
+
+// 1) schema: структура (блокуюча, швидка). Без неї застосунок не стартує.
+async function createSchema(db) {
+  await exec(db, SCHEMA);
+  // ключ ідемпотентності для старих файлів БД без цього стовпця
   const columns = await all(db, 'PRAGMA table_info(bookings)');
   if (!columns.some((c) => c.name === 'idempotency_key')) {
     await exec(db, 'ALTER TABLE bookings ADD COLUMN idempotency_key TEXT');
   }
-  await exec(
-    db,
-    `CREATE UNIQUE INDEX IF NOT EXISTS ux_bookings_idempotency
-     ON bookings(idempotency_key)`
-  );
+}
 
-  // 2) дати дд.мм.рррр → ISO, щоб datetime(created_at) не повертав NULL
+// 2) data: оновлення даних (неблокуюче): дати дд.мм.рррр → ISO.
+// Пачками, щоб між пачками блокування записів знімалось.
+async function migrateData(db, { batchSize = 500 } = {}) {
   for (const table of ['bookings', 'reviews']) {
-    await exec(
-      db,
-      `UPDATE ${table}
-       SET created_at = substr(created_at, 7, 4) || '-' || substr(created_at, 4, 2)
-                        || '-' || substr(created_at, 1, 2) || ' 00:00:00'
-       WHERE created_at GLOB ${OLD_DATE_FORMAT}`
-    );
+    for (;;) {
+      const { changes } = await run(
+        db,
+        `UPDATE ${table}
+         SET created_at = substr(created_at, 7, 4) || '-' || substr(created_at, 4, 2)
+                          || '-' || substr(created_at, 1, 2) || ' 00:00:00'
+         WHERE id IN (
+           SELECT id FROM ${table} WHERE created_at GLOB ${OLD_DATE_FORMAT} LIMIT ?
+         )`,
+        [batchSize]
+      );
+      if (changes === 0) break;
+    }
   }
+}
+
+// 3) indexes: індекси (окремий крок, на великій БД довгий)
+async function createIndexes(db) {
+  await exec(db, INDEXES);
 }
 
 // Початкові дані записуються в одній транзакції (або всі, або жодних)
@@ -149,20 +178,72 @@ async function seedIfEmpty(db) {
   logger.info('База заповнена початковими даними');
 }
 
-// Схема + міграції + початкові дані (приймає вже відкрите з'єднання)
+// 4) seed: початкові дані (окремо від міграцій) — у функції seedIfEmpty вище
+
+const STEPS = {
+  schema: createSchema,
+  data: migrateData,
+  indexes: createIndexes,
+  seed: seedIfEmpty,
+};
+const MIGRATION_STEPS = Object.keys(STEPS);
+
+// Виконує один крок і записує його в журнал schema_migrations
+async function runMigrationStep(db, name, options) {
+  const step = STEPS[name];
+  if (!step) {
+    throw new Error(
+      `Невідомий крок міграції "${name}". Доступні: ${MIGRATION_STEPS.join(', ')}`
+    );
+  }
+  const started = Date.now();
+  await step(db, options);
+  await exec(
+    db,
+    `CREATE TABLE IF NOT EXISTS schema_migrations (
+       name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)`
+  );
+  await run(
+    db,
+    'INSERT OR REPLACE INTO schema_migrations (name, applied_at) VALUES (?, ?)',
+    [name, nowIso()]
+  );
+  logger.info(`міграція "${name}": готово (${Date.now() - started} мс)`);
+}
+
+// Усі кроки підряд: для тестів і локальної розробки (у контейнері кроки окремі)
 async function initSchema(db) {
-  await exec(db, SCHEMA);
-  await migrate(db);
-  await seedIfEmpty(db);
+  for (const name of MIGRATION_STEPS) {
+    await runMigrationStep(db, name);
+  }
+}
+
+// Без міграцій на старті: переконуємось, що крок schema уже виконано
+async function assertSchemaReady(db) {
+  const table = await get(
+    db,
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'"
+  );
+  const done =
+    table &&
+    (await get(db, "SELECT name FROM schema_migrations WHERE name = 'schema'"));
+  if (!done) {
+    throw new Error(
+      'Схема БД не готова: виконайте `node scripts/migrate.js schema`'
+    );
+  }
 }
 
 let current = null;
 
-async function initDatabase(filePath) {
+// migrate: true (за замовчуванням) виконує всі кроки; false (контейнер) лише
+// перевіряє, що крок schema уже виконано окремим процесом
+async function initDatabase(filePath, { migrate = true } = {}) {
   const db = await openDatabase(filePath);
   try {
     await prepareConnection(db);
-    await initSchema(db);
+    if (migrate) await initSchema(db);
+    else await assertSchemaReady(db);
   } catch (err) {
     await new Promise((resolve) => db.close(() => resolve()));
     throw err;
@@ -193,6 +274,9 @@ async function closeDatabase() {
 module.exports = {
   initDatabase,
   initSchema,
+  runMigrationStep,
+  assertSchemaReady,
+  MIGRATION_STEPS,
   prepareConnection,
   openDatabase,
   getDatabase,

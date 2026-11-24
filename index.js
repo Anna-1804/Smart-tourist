@@ -17,6 +17,7 @@ const tourService = require('./services/tourService');
 const bookingService = require('./services/bookingService');
 const reviewService = require('./services/reviewService');
 const adminService = require('./services/adminService');
+const healthService = require('./services/healthService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -149,6 +150,25 @@ app.post('/admin/tours/:id/update', requireAdmin, async (req, res) => {
   }
 });
 
+// ==========================================
+// СЛУЖБОВІ ЕНДПОІНТИ (CI/CD)
+// ==========================================
+
+// Готовність: blue-green пускає трафік на нову версію лише після 200 звідси
+app.get('/health', async (req, res) => {
+  const { ok, reason, applied } = await healthService.check();
+  res.status(ok ? 200 : 503).json({
+    status: ok ? 'ok' : 'unavailable',
+    ...(ok ? {} : { reason }),
+    migrations: applied,
+  });
+});
+
+// SHA задеплоєного коміта (його передає збірка образу через GIT_SHA)
+app.get('/version', (req, res) => {
+  res.json({ sha: process.env.GIT_SHA || 'unknown' });
+});
+
 // Неіснуючі сторінки → у єдиний обробник помилок
 app.use((req, res, next) => {
   next(new NotFoundError('Запитаний ресурс чи сторінку не знайдено.'));
@@ -158,9 +178,12 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 // Явний старт: спершу БД (SELECT 1, схема, міграції), потім сервер.
-// Якщо БД недоступна, процес падає одразу.
+// Якщо БД недоступна, процес падає одразу. У контейнері міграції виконує
+// docker-entrypoint.sh окремими кроками (MIGRATE_ON_START=false): тут лише перевірка.
 const start = async () => {
-  await initDatabase();
+  await initDatabase(undefined, {
+    migrate: process.env.MIGRATE_ON_START !== 'false',
+  });
   return app.listen(PORT, () => {
     logger.info(
       `Проєкт Smart-tourist на SQLite запущено: http://localhost:${PORT}`

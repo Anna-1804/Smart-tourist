@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# новий пуш у ту саму гілку скасовує попередній прогін
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: 0
+
+jobs:
+  style:
+    name: style (prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+
+  lint:
+    name: lint (eslint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    name: test (unit + integration + coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Покриття критичної логіки (100%)
+        run: npm run test:coverage
+
+  commits:
+    name: commits (conventional)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Коміти PR відповідають Conventional Commits
+        run: node scripts/check-commits.js ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
+
+  docker:
+    name: docker (образ і міграції при старті)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Збірка образу
+        run: docker build --build-arg GIT_SHA=${{ github.sha }} -t smart-tourist:ci .
+      - name: Старт контейнера (міграції виконуються в ньому) і перевірка /health та /version
+        run: |
+          docker run -d --name app -p 3000:3000 -e SEED=true smart-tourist:ci
+          for i in $(seq 1 30); do
+            curl -fs http://localhost:3000/health && break
+            sleep 1
+          done
+          curl -fs http://localhost:3000/health
+          curl -fs http://localhost:3000/version | grep -q "\"sha\":\"$GITHUB_SHA\""
+          curl -fs http://localhost:3000/ > /dev/null
+      - name: Журнал контейнера
+        if: always()
+        run: docker logs app
+
+  # Єдина перевірка, яку вимагає branch protection. Пропущені (skipped) job
+  # GitHub вважає успішними, тому падіння будь-якої залежності ловимо явно.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [style, lint, build, test, commits, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Усі перевірки зелені
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "Є червоні або скасовані перевірки"
+          exit 1

@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "check:commits": "node scripts/check-commits.js",
     "test:smoke": "node --check index.js && node --check database/index.js",
-    "build": "echo 'Build successful' && exit 0",
+    "build": "exit 1",
     "prepare": "husky || true",
     "test": "node --test \"tests/**/*.test.js\"",
     "test:unit": "node --test \"tests/unit/*.test.js\"",

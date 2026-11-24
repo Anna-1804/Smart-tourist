@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM node:22-trixie-slim
 WORKDIR /app
 
 # HUSKY=0: у образі немає git-хуків; MIGRATE_ON_START=false: міграції робить entrypoint

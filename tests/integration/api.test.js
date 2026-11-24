@@ -518,3 +518,58 @@ describe('Сценарії помилок і ідентифікатор проц
     });
   });
 });
+
+describe('CI/CD: /health і /version', () => {
+  const json = async (path) => {
+    const res = await get(path);
+    return { status: res.status, data: JSON.parse(res.body) };
+  };
+
+  test('/health: схема готова → 200 і список виконаних кроків міграцій', async () => {
+    const { status, data } = await json('/health');
+    assert.equal(status, 200);
+    assert.equal(data.status, 'ok');
+    // у тестах initDatabase виконує всі чотири кроки
+    assert.deepEqual(data.migrations, ['data', 'indexes', 'schema', 'seed']);
+  });
+
+  test('/health: крок schema не записано → 503, трафік на цю версію не йде', async () => {
+    await dbExec("DELETE FROM schema_migrations WHERE name = 'schema'");
+    const { status, data } = await json('/health');
+    assert.equal(status, 503);
+    assert.equal(data.status, 'unavailable');
+    assert.equal(data.reason, 'схема БД не готова');
+  });
+
+  test('/health: журнал міграцій недоступний → 503, сервер не падає', async () => {
+    await dbExec('DROP TABLE schema_migrations');
+    const { status, data } = await json('/health');
+    assert.equal(status, 503);
+    assert.equal(data.reason, 'БД недоступна');
+    assert.deepEqual(data.migrations, []);
+    assert.equal((await get('/')).status, 200);
+  });
+
+  test('/version: повертає SHA зі змінної GIT_SHA', async () => {
+    const previous = process.env.GIT_SHA;
+    process.env.GIT_SHA = '0123abc';
+    try {
+      const { status, data } = await json('/version');
+      assert.equal(status, 200);
+      assert.deepEqual(data, { sha: '0123abc' });
+    } finally {
+      if (previous === undefined) delete process.env.GIT_SHA;
+      else process.env.GIT_SHA = previous;
+    }
+  });
+
+  test('/version: без GIT_SHA → "unknown"', async () => {
+    const previous = process.env.GIT_SHA;
+    delete process.env.GIT_SHA;
+    try {
+      assert.deepEqual((await json('/version')).data, { sha: 'unknown' });
+    } finally {
+      if (previous !== undefined) process.env.GIT_SHA = previous;
+    }
+  });
+});

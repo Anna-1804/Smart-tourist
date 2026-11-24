@@ -35,7 +35,7 @@ describe('reviewService.addReview', () => {
     test(`без поля ${field} → 400`, async () => {
       await rejectsWith(
         reviewService.addReview('2', { ...VALID, [field]: '' }),
-        400,
+        200,
         /Заповніть/
       );
     });

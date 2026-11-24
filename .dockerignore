@@ -1,0 +1,16 @@
+node_modules
+.git
+.github
+.husky
+database.sqlite*
+tmp
+reports
+coverage
+playwright-report
+test-results
+.stryker-tmp
+tests
+docs
+images
+ai
+standards

@@ -166,7 +166,11 @@ app.get('/health', async (req, res) => {
 
 // SHA задеплоєного коміта (його передає збірка образу через GIT_SHA)
 app.get('/version', (req, res) => {
-  res.json({ sha: process.env.GIT_SHA || 'unknown' });
+  const sha =
+    [process.env.GIT_SHA, process.env.RENDER_GIT_COMMIT].find(
+      (v) => v && v !== 'unknown'
+    ) || 'unknown';
+  res.json({ sha });
 });
 
 // Неіснуючі сторінки → у єдиний обробник помилок

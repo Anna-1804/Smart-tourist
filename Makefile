@@ -7,7 +7,7 @@ format:
 	npm run format
 
 test:
-	npm test
+	npm run test:all
 
 e2e:
 	npm run test:e2e

@@ -26,7 +26,8 @@
     "test:coverage:all": "node --test --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-coverage-exclude=\"scripts/**\" --test-coverage-exclude=\"eslint.config.mjs\" --test-coverage-lines=90 --test-coverage-branches=85 --test-coverage-functions=85 \"tests/**/*.test.js\"",
     "check:http": "node scripts/check-http.js",
     "test:e2e": "playwright test",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "test:all": "npm test && npm run test:e2e"
   },
   "lint-staged": {
     "*.js": [

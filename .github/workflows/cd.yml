@@ -1,0 +1,45 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-stage
+  cancel-in-progress: false
+
+jobs:
+  deploy-stage:
+    name: deploy (stage)
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      STAGE_URL: ${{ vars.STAGE_URL }}
+    steps:
+      - name: Запустити деплой цього коміта на Render
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl -fsS -X POST "${HOOK}&ref=${SHA}"
+
+      - name: Дочекатися, поки stage віддає цей SHA
+        run: |
+          for i in $(seq 1 60); do
+            body=$(curl -fs --max-time 30 "$STAGE_URL/version" || true)
+            echo "спроба $i: $body"
+            if echo "$body" | grep -q "\"sha\":\"$SHA\""; then
+              echo "На stage працює коміт $SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Stage не віддав SHA $SHA"
+          exit 1
+
+      - name: Перевірка готовності
+        run: curl -fsS "$STAGE_URL/health"
